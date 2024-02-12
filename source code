@@ -1,0 +1,179 @@
+//SOURCE CODE
+
+#importing libraries and setting minor configurations
+import warnings
+warnings.simplefilter('ignore')
+import pandas as pd
+import numpy as np
+import seaborn as sns
+sns.set_theme()
+import matplotlib.pyplot as plt
+%matplotlib inline
+from sklearn.preprocessing import StandardScaler
+from sklearn.feature_selection import SelectKBest, f_classif
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+#to display all features of dataframes with many features
+pd.set_option('display.max_columns', None)
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.metrics import roc_curve, roc_auc_score
+from sklearn.metrics import precision_recall_curve, auc
+df = pd.read_csv('/content/gdrive/MyDrive/Colab Notebooks/dataset_full.csv')
+df.head(15)
+
+
+df.describe()
+
+
+#checking for null values
+sns.heatmap(df.isnull(),cbar= False)
+
+#initializing our standardizer
+scaler = StandardScaler()
+#function to standardize the numeric columns of the dataframe
+def prep_features(data):
+    # list of boolean features of the dataset
+    boolean_features = ['email_in_url', 'domain_in_ip', 'server_client_domain', 'tld_present_params', 'domain_spf','qty_dot_url', 'qty_hyphen_url','tls_ssl_certificate', 'url_google_index', 'domain_google_index', 'phishing']
+    #creating a dataframe of only numeric features
+    data1 = data.drop(boolean_features, axis=1)
+
+    # Normalize numeric columns
+    numeric_columns = data1.columns.difference(boolean_features)
+    data1[numeric_columns] = scaler.fit_transform(data1[numeric_columns])
+
+    # Concatenate boolean columns and standardized numeric columns
+    data_norm_full = pd.concat([data1, data[boolean_features]], axis=1)
+    return data_norm_full
+#calling the function on our dataframe
+df = prep_features(df)
+df.head()
+
+#separating our target from features.
+y_train = df['phishing']
+x = df.drop('phishing', axis = 1)
+
+#return the top 20 features with highest correlations
+corr_feat = df.corr()['phishing'].sort_values(ascending = False).head(21)
+print(corr_feat)
+
+#saving the selected_feature names into a list
+corr_cols = corr_feat.index
+print(corr_cols)
+
+# using the selectkbest algorithm to select the top 20 features using the f_classif func
+selector = SelectKBest(score_func=f_classif, k=20)  # Select top 20 features
+X_new = selector.fit_transform(x, y_train)
+#saving the selected features into a list and printing out
+selected_features_kbest = x.columns[selector.get_support()].tolist()
+print("Features selected using SelectKBest:", selected_features_kbest)
+
+# Get selected features indices
+selected_indices = selector.get_support(indices=True)
+
+# Plot feature scores
+plt.figure(figsize=(30, 6))
+plt.bar(range(len(selector.scores_)), selector.scores_)
+plt.xticks(range(len(selector.scores_)), x.columns, rotation=90, ha="right")
+plt.xlabel('Features')
+plt.ylabel('Feature Score')
+plt.title('Feature Selection using SelectKBest')
+plt.show()
+
+# Print selected features
+selected_features_kbest = [x.columns[i] for i in selected_indices]
+print("Features selected using SelectKBest:", selected_features_kbest)
+
+#checking rows that were selected in the linear_correlation method and also selected in the kbest algorithm
+for i in corr_cols:
+    if i in selected_features_kbest:
+        print(i)
+
+#declaring the selected features as features for training
+x_train = df[corr_cols].drop('phishing', axis = 1)
+x_train.head()
+
+x_train.describe()
+
+y_train.value_counts()
+
+#loading data to be used as test set
+df1 = pd.read_csv("/content/gdrive/MyDrive/Colab Notebooks/dataset_full.csv")
+#display a sample of 6 entries
+df1.head(6)
+
+#altering the function written earlier to make the scaler transform the test data and not fit before doing so.
+def prep_features_test(data):
+    # list of boolean features of the dataset
+    boolean_features = ['email_in_url', 'domain_in_ip', 'server_client_domain', 'tld_present_params', 'domain_spf', 'qty_dot_url','qty_hyphen_url','tls_ssl_certificate', 'url_google_index', 'domain_google_index', 'phishing']
+    #creating a dataframe of only numeric features
+    data1 = data.drop(boolean_features, axis=1)
+
+    # Normalize numeric columns
+    numeric_columns = data1.columns.difference(boolean_features)
+    data1[numeric_columns] = scaler.transform(data1[numeric_columns])
+
+    # Concatenate boolean columns and standardized numeric columns
+    data_norm_full = pd.concat([data1, data[boolean_features]], axis=1)
+    return data_norm_full
+#calling the pre_processing function on the test data
+df1 = prep_features_test(df1)
+#declaring the selected features to test the model on them
+x_test = df1[corr_cols].drop('phishing', axis = 1)
+#declaring the target for testing
+y_test = df1['phishing']
+x_test.info()
+
+
+x_train.info()
+
+#initializing the ensemble algorithm to train the data on
+rfc = RandomForestClassifier()
+#fitting the algorithm to the train data, i.e training the data
+rfc.fit(x_train, y_train)
+#predicting the class of the test data, whether it is a phishing domain or not
+pred = rfc.predict(x_test)
+print(confusion_matrix(y_test,pred),'\n', classification_report(pred,y_test))
+
+
+# Create a heatmap of the confusion matrix
+plt.figure(figsize=(6, 6))
+sns.heatmap(confusion_matrix(y_test,pred), annot=True, cmap='Blues', fmt='d')
+plt.xlabel('Predicted Labels')
+plt.ylabel('True Labels')
+plt.title('Confusion Matrix')
+plt.show()
+
+
+# Calculate ROC curve
+fpr, tpr, thresholds = roc_curve(y_test, pred)
+roc_auc = roc_auc_score(y_test, pred)
+
+# Create ROC curve plot
+plt.figure(figsize=(8, 6))
+plt.plot(fpr, tpr, color='blue', lw=2, label=f'ROC curve (AUC = {roc_auc:.2f})')
+plt.plot([0, 1], [0, 1], color='gray', linestyle='--')
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('ROC Curve')
+plt.legend(loc='lower right')
+plt.show()
+
+# Calculate precision-recall curve
+precision, recall, _ = precision_recall_curve(y_test, pred)
+pr_auc = auc(recall, precision)
+
+# Create precision-recall curve plot
+plt.figure(figsize=(8, 6))
+plt.plot(recall, precision, color='blue', lw=2, label=f'PR curve (AUC = {pr_auc:.2f})')
+plt.xlabel('Recall')
+plt.ylabel('Precision')
+plt.title('Precision-Recall Curve')
+plt.legend(loc='lower left')
+plt.show()
+
+Accuracy = accuracy_score(y_test, pred)
+
+print("Accuracy:", Accuracy)
