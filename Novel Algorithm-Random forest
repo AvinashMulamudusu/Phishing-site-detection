@@ -1,0 +1,18 @@
+# Import libraries
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, log_loss
+import matplotlib.pyplot as plt
+
+# Load dataset
+df = pd.read_csv('/content/gdrive/MyDrive/Colab Notebooks/dataset_full.csv')
+…train_loss = []
+
+# Iterate over estimators
+for i in range(1, 11):
+
+  rf = RandomForestClassifier(n_estimators=i)
+
+  # Train model
+  rf.fit(X_train, y_train)
