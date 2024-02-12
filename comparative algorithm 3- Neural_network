@@ -1,0 +1,48 @@
+# Import libraries
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.neural_network import MLPClassifier
+from sklearn.metrics import accuracy_score, log_loss
+import matplotlib.pyplot as plt
+
+# Load dataset
+df = pd.read_csv('/content/gdrive/MyDrive/Colab Notebooks/dataset_full.csv')
+
+# Extract features and target
+X = df.iloc[:,:-1].values
+y = df.iloc[:,-1].values
+
+# Split data into train-test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+
+# Track training metrics
+train_acc = []
+train_loss = []
+# Iterate over different hidden layers
+for hl in range(1,20):
+
+  # Create neural network model
+  mlp = MLPClassifier(hidden_layer_sizes=(hl,hl,hl))
+
+  # Train model
+  mlp.fit(X_train, y_train)
+
+  # Make predictions
+  y_pred = mlp.predict(X_test)
+
+  # Evaluate accuracy and log loss
+  acc = accuracy_score(y_test, y_pred)
+  loss = log_loss(y_test, y_pred)
+ # Store metrics
+  train_acc.append(acc)
+  train_loss.append(loss)
+# Plot accuracy and loss
+plt.plot(train_acc, label='Accuracy')
+plt.plot(train_loss, label='Log Loss')
+
+plt.title("Metrics vs Hidden Layers")
+plt.xlabel("Hidden Layers")
+plt.legend()
+plt.show()
+print("Accuracy:", train_acc)
+print("Loss:", train_loss)
