@@ -1,0 +1,20 @@
+# Import libraries
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import GaussianNB
+from sklearn.metrics import accuracy_score, log_loss
+import matplotlib.pyplot as plt
+
+# Load dataset
+df = pd.read_csv('/content/gdrive/MyDrive/Colab Notebooks/dataset_full.csv')
+
+…  # Make predictions
+  y_pred = nb.predict(X_test)
+
+  # Evaluate accuracy and log loss
+  acc = accuracy_score(y_test, y_pred)
+  loss = log_loss(y_test, y_pred)
+
+  # Store metrics
+  train_acc.append(acc)
+  train_loss.append(loss)
